@@ -1,0 +1,6 @@
+*.exe
+.env
+/.cache
+__*_bin
+/dist
+/node_modules

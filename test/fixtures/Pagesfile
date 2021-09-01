@@ -1,0 +1,45 @@
+server "default" {
+
+  listen {
+    bind = "${lookup(env, "BIND", "0.0.0.0")}"
+    port = "${lookup(env, "PORT", 80)}"
+  }
+
+  pages {
+
+    page "page_a" {
+      hosts = [
+        "a.local.l8n.io"
+      ]
+      source "local" {
+        root = "${dirs.cwd}/pages/page_a"
+      }
+    }
+
+    page "page_b" {
+      hosts = [
+        "b.local.l8n.io"
+      ]
+      source "local" {
+        root = "${dirs.cwd}/pages/page_b"
+      }
+    }
+
+    page "others" {
+      hosts = [
+        "{page:[a-z0-9]+}.local.l8n.io"
+      ]
+      source "local" {
+        root = "${dirs.cwd}/domains/${request.host}"
+      }
+    }
+
+    page "default" {
+      source "local" {
+      }
+    }
+
+  }
+
+}
+

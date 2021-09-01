@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Pages",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/pages/main.go",
+      "cwd": "${workspaceFolder}/test/fixtures",
+      "args": [
+        "start"
+      ]
+    }
+  ]
+}

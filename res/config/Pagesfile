@@ -1,0 +1,47 @@
+#
+# The Pagesfile is an easy way to configure your pages server.
+#
+# This file uses HCL configuration language. If you want more
+# information about the syntax itself, go to the official
+# repository at https://github.com/hashicorp/hcl
+#
+
+# Registers a default server instance
+server "default" {
+
+  # Server listen configuration
+  listen {
+    # bind = "0.0.0.0"
+    port = 80
+  }
+
+  # Pages configuration
+  pages {
+    # Serve from a folder if domain matches `*.local.l8n.io`
+    # These subdomains will always resolve to 127.0.0.1 for demo purposes.
+    page "domains" {
+      hosts = [
+        "{page:[a-z0-9]+}.local.l8n.io"
+      ]
+      source "local" {
+        root = "/usr/share/linefusion/pages/domains/${request.host}"
+      }
+    }
+
+    # The default page handler
+    page "default" {
+      # A "local" source directory
+      source "local" {
+        root = "/usr/share/linefusion/pages/default"
+      }
+    }
+
+    # Example page serving /var/www
+    #page "example" {
+    #  source "local" {
+    #    root = "/var/www"
+    #  }
+    #}
+  }
+}
+

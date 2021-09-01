@@ -1,0 +1,32 @@
+{
+  "name": "@linefusion/pages",
+  "version": "1.0.0",
+  "description": "Linefusion Pages",
+  "license": "MIT",
+  "keywords": [
+    "linefusion",
+    "cli",
+    "pages",
+    "hosting",
+    "static",
+    "server",
+    "webserver"
+  ],
+  "author": {
+    "name": "João Biondo",
+    "email": "joao@linefusion.io",
+    "url": "https://github.com/wolfulus"
+  },
+  "homepage": "https://github.com/linefusion/pages#readme",
+  "bugs": {
+    "url": "https://github.com/linefusion/pages/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/linefusion/pages.git"
+  },
+  "scripts": {
+    "start": "npm run build",
+    "build": "bash ./scripts/build.sh"
+  }
+}

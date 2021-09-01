@@ -1,0 +1,24 @@
+server "default" {
+  listen {
+    bind = "${lookup(env, "BIND", "0.0.0.0")}"
+    port = "${lookup(env, "PORT", 3000)}"
+  }
+
+  pages {
+    page "examples" {
+      enabled = "${lookup(env, "WITH_EXAMPLES", false)}"
+      hosts = [
+        "{page:[a-z0-9]+}.local.l8n.io"
+      ]
+      source "local" {
+        root = "/pages/domains/${request.host}"
+      }
+    }
+
+    page "default" {
+      source "local" {
+        root = "${lookup(env, "ROOT", dirs.cwd)}"
+      }
+    }
+  }
+}

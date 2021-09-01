@@ -1,0 +1,164 @@
+project_name: pages
+
+builds:
+  - id: pages
+    main: ./cmd/pages/main.go
+    binary: pages
+    flags:
+      - -trimpath
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - windows
+      - darwin
+    goarch:
+      - arm
+      - arm64
+      - amd64
+    goarm:
+      - 6
+      - 7
+
+archives:
+  - format_overrides:
+      - goos: windows
+        format: zip
+    replacements:
+      darwin: mac
+
+checksum:
+  name_template: "{{ .ProjectName }}-checksum.txt"
+
+snapshot:
+  name_template: "{{ .Tag }}"
+
+nfpms:
+  - id: default
+    package_name: pages
+    vendor: Linefusion
+    homepage: https://pages.linefusion.io
+    maintainer: João Biondo <joao@linefusion.io>
+    description: |
+      Linefusion Pages - Static file server
+    license: MIT
+    formats:
+      - deb
+    bindir: /usr/bin
+    contents:
+      - src: ./res/init/pages.service
+        dst: /lib/systemd/system/pages.service
+      - src: ./res/pages/default/index.html
+        dst: /usr/share/linefusion/pages/default/index.html
+      - src: ./res/pages/default/404.html
+        dst: /usr/share/linefusion/pages/default/404.html
+      - src: ./res/pages/domains/example1.local.l8n.io/index.html
+        dst: /usr/share/linefusion/pages/domains/example1.local.l8n.io/index.html
+      - src: ./res/pages/domains/example2.local.l8n.io/index.html
+        dst: /usr/share/linefusion/pages/domains/example2.local.l8n.io/index.html
+      - src: ./res/config/Pagesfile
+        dst: /etc/linefusion/pages/Pagesfile
+        type: config
+    scripts:
+      postinstall: ./res/scripts/postinstall.sh
+      preremove: ./res/scripts/preremove.sh
+      postremove: ./res/scripts/postremove.sh
+
+release:
+  github:
+    owner: linefusion
+    name: pages
+  draft: true
+  prerelease: auto
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^chore:"
+      - "^ci:"
+      - "^docs?:"
+      - "^readme:"
+      - "^tests?:"
+      - '^\w+\s+'
+
+dockers:
+  - use: buildx
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: amd64
+    image_templates:
+      - "linefusion/pages:{{ .Major }}-amd64"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}-amd64"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64"
+    build_flag_templates:
+      - "--platform=linux/amd64"
+    extra_files:
+      - res
+
+  - use: buildx
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: arm64
+    image_templates:
+      - "linefusion/pages:{{ .Major }}-arm64"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}-arm64"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64"
+    build_flag_templates:
+      - "--platform=linux/arm64"
+    extra_files:
+      - res
+
+  - use: buildx
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: arm
+    goarm: 6
+    image_templates:
+      - "linefusion/pages:{{ .Major }}-armv6"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}-armv6"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv6"
+    build_flag_templates:
+      - "--platform=linux/arm/v6"
+    extra_files:
+      - res
+
+  - use: buildx
+    dockerfile: Dockerfile
+    goos: linux
+    goarch: arm
+    goarm: 7
+    image_templates:
+      - "linefusion/pages:{{ .Major }}-armv7"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}-armv7"
+      - "linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7"
+    build_flag_templates:
+      - "--platform=linux/arm/v7"
+    extra_files:
+      - res
+
+docker_manifests:
+  - name_template: linefusion/pages:{{ .Major }}
+    image_templates:
+      - linefusion/pages:{{ .Major }}-amd64
+      - linefusion/pages:{{ .Major }}-arm64
+      - linefusion/pages:{{ .Major }}-armv6
+      - linefusion/pages:{{ .Major }}-armv7
+  - name_template: linefusion/pages:{{ .Major }}.{{ .Minor }}
+    image_templates:
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}-amd64
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}-arm64
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}-armv6
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}-armv7
+  - name_template: linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}
+    image_templates:
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv6
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7
+  - name_template: linefusion/pages:latest
+    image_templates:
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-amd64
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-arm64
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv6
+      - linefusion/pages:{{ .Major }}.{{ .Minor }}.{{ .Patch }}-armv7
