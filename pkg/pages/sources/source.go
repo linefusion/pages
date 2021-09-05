@@ -1,30 +1,62 @@
 package sources
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
+	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/hashicorp/hcl/v2/gohcl"
+	"github.com/karlseguin/ccache/v2"
+	"github.com/linefusion/pages/pkg/pages/cache"
 	"github.com/linefusion/pages/pkg/pages/config"
 	"github.com/spf13/afero"
 )
 
 type Source interface {
-	Fs(r *http.Request) (afero.Fs, error)
+	Configure()
+
+	Fs(request *http.Request) (afero.Fs, error)
+
+	GetFsCache() *ccache.Cache
+	GetFsCacheKeys() *cache.KeyBuilder
 }
 
-type SourceParser func(options hcl.Body) (Source, error)
+var registeredSources map[string]reflect.Type = map[string]reflect.Type{}
 
-var sourceParsers map[string]SourceParser = map[string]SourceParser{}
+func Register(name string, source interface{}) {
+	sourceType := reflect.TypeOf(source).Elem()
 
-func Register(source string, parser SourceParser) {
-	sourceParsers[source] = parser
-}
-
-func New(config config.PageSourceConfig) (Source, error) {
-	parse, ok := sourceParsers[config.Type]
-	if !ok {
-		return nil, fmt.Errorf("unknown page source \"%s\"", config.Type)
+	if _, ok := source.(Source); !ok {
+		panic("invalid source type")
 	}
-	return parse(config.Options)
+	registeredSources[name] = sourceType
+}
+
+func New(block config.SourceBlock) (Source, error) {
+	sourceType, ok := registeredSources[block.Type]
+	if !ok {
+		return nil, fmt.Errorf("unknown page source \"%s\"", block.Type)
+	}
+
+	source := reflect.New(sourceType).Interface()
+	err := configure(source, block.Options)
+	if err != nil {
+		return nil, err
+	}
+
+	src := source.(Source)
+	src.Configure()
+
+	return src, nil
+}
+
+func configure(source interface{}, options hcl.Body) error {
+	context := config.CreateDefaultContext()
+	if diagnostics := gohcl.DecodeBody(options, &context, source); diagnostics.HasErrors() {
+		return errors.New(diagnostics.Error())
+	}
+
+	return nil
 }

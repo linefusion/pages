@@ -21,21 +21,21 @@ type Server struct {
 }
 
 type ServerHandler struct {
-	Page   config.PageConfig
+	Page   config.PageBlock
 	Source sources.Source
 }
 
-func (handler ServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	fs, err := handler.Source.Fs(r)
+func (handler ServerHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
+	fs, err := handler.Source.Fs(request)
 	if err != nil {
-		w.WriteHeader(500)
-		w.Write([]byte(""))
+		response.WriteHeader(500)
+		response.Write([]byte(""))
 		return
 	}
 
 	httpFs := afero.NewHttpFs(fs)
 	requestHandler := http.FileServer(httpFs.Dir("/"))
-	requestHandler.ServeHTTP(w, r)
+	requestHandler.ServeHTTP(response, request)
 }
 
 func New(ctx context.Context, conf config.ServerConfig) Server {
@@ -52,7 +52,7 @@ func (server *Server) Start() {
 
 	router := mux.NewRouter()
 
-	for _, page := range server.config.Pages.Configs {
+	for _, page := range server.config.Pages.Entries {
 		if page.Path == "" {
 			page.Path = "/"
 		}

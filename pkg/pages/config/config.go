@@ -122,11 +122,11 @@ func CreateDefaultContext() hcl.EvalContext {
 	return context
 }
 
-func CreateRequestContext(r *http.Request) hcl.EvalContext {
+func CreateRequestContext(request *http.Request) hcl.EvalContext {
 	context := CreateDefaultContext()
 
 	params := map[string]cty.Value{}
-	for paramKey, paramValues := range r.URL.Query() {
+	for paramKey, paramValues := range request.URL.Query() {
 		values := []cty.Value{}
 		for _, paramValue := range paramValues {
 			values = append(values, cty.StringVal(paramValue))
@@ -135,7 +135,7 @@ func CreateRequestContext(r *http.Request) hcl.EvalContext {
 	}
 
 	headers := map[string]cty.Value{}
-	for headerKey, headerValues := range r.Header {
+	for headerKey, headerValues := range request.Header {
 		values := []cty.Value{}
 		for _, headerValue := range headerValues {
 			values = append(values, cty.StringVal(headerValue))
@@ -144,10 +144,10 @@ func CreateRequestContext(r *http.Request) hcl.EvalContext {
 	}
 
 	context.Variables["request"] = cty.ObjectVal(map[string]cty.Value{
-		"method":  cty.StringVal(r.Method),
-		"scheme":  cty.StringVal(r.URL.Scheme),
-		"host":    cty.StringVal(r.Host),
-		"path":    cty.StringVal(r.URL.Path),
+		"method":  cty.StringVal(request.Method),
+		"scheme":  cty.StringVal(request.URL.Scheme),
+		"host":    cty.StringVal(request.Host),
+		"path":    cty.StringVal(request.URL.Path),
 		"params":  cty.ObjectVal(params),
 		"headers": cty.ObjectVal(headers),
 	})
