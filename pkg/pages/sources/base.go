@@ -1,53 +1,38 @@
 package sources
 
 import (
-	"fmt"
+	"errors"
 	"net/http"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/karlseguin/ccache/v2"
 	"github.com/linefusion/pages/pkg/pages/cache"
-	"github.com/linefusion/pages/pkg/pages/config"
-	"github.com/spf13/afero"
+	"github.com/zclconf/go-cty/cty"
 )
 
 type BaseSource struct {
 	cacheKeys *cache.KeyBuilder
-	cache     *ccache.Cache
 }
 
-func (base *BaseSource) GetFsCacheKeys() *cache.KeyBuilder {
-	if base.cacheKeys == nil {
-		base.cacheKeys = cache.NewKeyBuilder()
+func (source *BaseSource) CacheKeys() *cache.KeyBuilder {
+	if source.cacheKeys == nil {
+		source.cacheKeys = cache.NewKeyBuilder()
 	}
-	return base.cacheKeys
+	return source.cacheKeys
 }
 
-func (base *BaseSource) GetFsCache() *ccache.Cache {
-	if base.cache == nil {
-		base.cache = ccache.New(ccache.Configure())
-	}
-	return base.cache
+func (source *BaseSource) CreateKey(request *http.Request) string {
+	return source.CacheKeys().GetString(request)
 }
 
-func (source *BaseSource) GetCachedFs(request *http.Request, createFs func(hcl.EvalContext) (afero.Fs, error)) (afero.Fs, error) {
-	cacheKey := source.GetFsCacheKeys().GetString(request)
-
-	var fs afero.Fs
-	var item *ccache.Item = source.GetFsCache().Get(cacheKey)
-
-	if item != nil {
-		return item.Value().(afero.Fs), nil
+func evaluate(context hcl.EvalContext, expr hcl.Expression, def cty.Value) (cty.Value, error) {
+	if expr == nil {
+		return def, nil
 	}
 
-	fmt.Println("Criando fs")
-
-	context := config.CreateRequestContext(request)
-	fs, err := createFs(context)
-	if err != nil {
-		return fs, err
+	value, diagnostics := expr.Value(&context)
+	if diagnostics.HasErrors() {
+		return cty.NilVal, errors.New(diagnostics.Error())
 	}
 
-	source.cache.Set(cacheKey, fs, 0)
-	return fs, nil
+	return value, nil
 }

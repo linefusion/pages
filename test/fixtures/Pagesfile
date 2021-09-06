@@ -7,30 +7,43 @@ server "default" {
 
   pages {
 
-    page "page_a" {
+    page "static-a" {
       hosts = [
         "a.local.l8n.io"
       ]
       source "local" {
-        root = "${dirs.cwd}/pages/page_a"
+        root = "./test/fixture/pages/page_a"
       }
     }
 
-    page "page_b" {
+    page "static-b" {
       hosts = [
         "b.local.l8n.io"
       ]
       source "local" {
-        root = "${dirs.cwd}/pages/page_b"
+        root = "./test/fixture/pages/page_b"
       }
     }
 
-    page "others" {
+    page "remote-s3" {
+      hosts = [
+        "s3.local.l8n.io"
+      ]
+      source "s3" {
+        root = "/some/folder"
+        endpoint = "${lookup(env, "S3_ENDPOINT", "")}"
+        bucket = "${lookup(env, "S3_BUCKET", "")}"
+        access_key_id = "${lookup(env, "S3_ACCESS_KEY_ID", "")}"
+        access_secret_key = "${lookup(env, "S3_ACCESS_SECRET_KEY", "")}"
+      }
+    }
+
+    page "local-dynamic" {
       hosts = [
         "{page:[a-z0-9]+}.local.l8n.io"
       ]
       source "local" {
-        root = "${dirs.cwd}/domains/${request.host}"
+        root = "./test/fixture/domains/${request.host}"
       }
     }
 

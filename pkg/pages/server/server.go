@@ -9,9 +9,9 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	"github.com/karlseguin/ccache/v2"
 	"github.com/linefusion/pages/pkg/pages/config"
 	"github.com/linefusion/pages/pkg/pages/sources"
-	"github.com/spf13/afero"
 )
 
 type Server struct {
@@ -21,21 +21,47 @@ type Server struct {
 }
 
 type ServerHandler struct {
-	Page   config.PageBlock
-	Source sources.Source
+	handlers *ccache.Cache
+	Page     config.PageBlock
+	Source   sources.Source
+	Server   *Server
+}
+
+func NewServerHandler(server *Server, page config.PageBlock, source sources.Source) *ServerHandler {
+	handler := &ServerHandler{
+		Server: server,
+		Page:   page,
+		Source: source,
+	}
+	handler.handlers = ccache.New(ccache.Configure())
+	return handler
 }
 
 func (handler ServerHandler) ServeHTTP(response http.ResponseWriter, request *http.Request) {
-	fs, err := handler.Source.Fs(request)
-	if err != nil {
-		response.WriteHeader(500)
-		response.Write([]byte(""))
-		return
+
+	requestKey := handler.Source.CreateKey(request)
+
+	var item *ccache.Item = handler.handlers.Get(requestKey)
+
+	var serve http.Handler
+
+	if item != nil {
+		serve = item.Value().(http.Handler)
+	} else {
+		context := config.CreateRequestContext(request)
+
+		sourceFs, err := handler.Source.CreateFs(context, request)
+		if err != nil {
+			response.WriteHeader(500)
+			response.Write([]byte("500 Internal Server Error"))
+			return
+		}
+
+		serve = http.FileServer(http.FS(sourceFs))
+		handler.handlers.Set(requestKey, serve, 0)
 	}
 
-	httpFs := afero.NewHttpFs(fs)
-	requestHandler := http.FileServer(httpFs.Dir("/"))
-	requestHandler.ServeHTTP(response, request)
+	serve.ServeHTTP(response, request)
 }
 
 func New(ctx context.Context, conf config.ServerConfig) Server {
@@ -75,19 +101,13 @@ func (server *Server) Start() {
 					Host(host).
 					Subrouter().
 					PathPrefix(page.Path).
-					Handler(&ServerHandler{
-						Page:   page,
-						Source: source,
-					})
+					Handler(NewServerHandler(server, page, source))
 			}
 		} else {
 			fmt.Printf(" > Exposing page \"%s\" matching any host\n", page.Name)
 			router.
 				PathPrefix(page.Path).
-				Handler(&ServerHandler{
-					Page:   page,
-					Source: source,
-				})
+				Handler(NewServerHandler(server, page, source))
 		}
 	}
 

@@ -2,11 +2,11 @@ package sources
 
 import (
 	"errors"
+	"io/fs"
 	"net/http"
 	"os"
 
 	"github.com/hashicorp/hcl/v2"
-	"github.com/spf13/afero"
 )
 
 type LocalSource struct {
@@ -14,28 +14,26 @@ type LocalSource struct {
 	Root hcl.Expression `hcl:"root,optional"`
 }
 
-func (source *LocalSource) Fs(request *http.Request) (afero.Fs, error) {
-	return source.GetCachedFs(request, func(context hcl.EvalContext) (afero.Fs, error) {
-		rootDir, err := os.Getwd()
-		if err != nil {
-			rootDir = "./"
-		}
+func (source *LocalSource) CreateFs(context hcl.EvalContext, request *http.Request) (fs.FS, error) {
+	rootDir, err := os.Getwd()
+	if err != nil {
+		rootDir = "./"
+	}
 
-		root, diagnostics := source.Root.Value(&context)
-		if diagnostics.HasErrors() {
-			return nil, errors.New(diagnostics.Error())
-		}
+	root, diagnostics := source.Root.Value(&context)
+	if diagnostics.HasErrors() {
+		return nil, errors.New(diagnostics.Error())
+	}
 
-		if !root.IsNull() {
-			rootDir = root.AsString()
-		}
+	if !root.IsNull() {
+		rootDir = root.AsString()
+	}
 
-		return afero.NewBasePathFs(afero.NewOsFs(), rootDir), nil
-	})
+	return os.DirFS(rootDir), nil
 }
 
 func (source *LocalSource) Configure() {
-	source.GetFsCacheKeys().UseExpression(source.Root)
+	source.CacheKeys().UseExpression(source.Root)
 }
 
 func init() {

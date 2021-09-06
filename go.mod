@@ -12,7 +12,6 @@ require (
 	github.com/kr/text v0.2.0 // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/sergi/go-diff v1.2.0 // indirect
-	github.com/spf13/afero v1.6.0
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/zclconf/go-cty v1.8.4
 	golang.org/x/text v0.3.6 // indirect
@@ -23,8 +22,12 @@ require (
 
 require (
 	github.com/apparentlymart/go-textseg/v13 v13.0.0 // indirect
+	github.com/aws/aws-sdk-go v1.40.37
 	github.com/cpuguy83/go-md2man/v2 v2.0.0-20190314233015-f79a8a8ca69d // indirect
+	github.com/jszwec/s3fs v0.3.1
 	github.com/kr/pretty v0.2.1 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 )
+
+require github.com/jmespath/go-jmespath v0.4.0 // indirect

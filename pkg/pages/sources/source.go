@@ -3,24 +3,23 @@ package sources
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/karlseguin/ccache/v2"
 	"github.com/linefusion/pages/pkg/pages/cache"
 	"github.com/linefusion/pages/pkg/pages/config"
-	"github.com/spf13/afero"
 )
 
 type Source interface {
 	Configure()
 
-	Fs(request *http.Request) (afero.Fs, error)
+	CreateKey(request *http.Request) string
+	CreateFs(context hcl.EvalContext, request *http.Request) (fs.FS, error)
 
-	GetFsCache() *ccache.Cache
-	GetFsCacheKeys() *cache.KeyBuilder
+	CacheKeys() *cache.KeyBuilder
 }
 
 var registeredSources map[string]reflect.Type = map[string]reflect.Type{}

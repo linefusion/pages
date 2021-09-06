@@ -7,9 +7,11 @@
       "request": "launch",
       "mode": "auto",
       "program": "${workspaceFolder}/cmd/pages/main.go",
-      "cwd": "${workspaceFolder}/test/fixtures",
+      "cwd": "${workspaceFolder}",
       "args": [
-        "start"
+        "start",
+        "--config",
+        "./test/fixtures/Pagesfile"
       ]
     }
   ]
