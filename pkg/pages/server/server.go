@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"runtime"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/gorilla/mux"
 	"github.com/karlseguin/ccache/v2"
 	"github.com/linefusion/pages/pkg/pages/config"
@@ -74,11 +74,17 @@ func New(ctx context.Context, conf config.ServerConfig) Server {
 func (server *Server) Start() {
 	bind := fmt.Sprintf("%s:%d", server.config.Listen.Bind, server.config.Listen.Port)
 
-	fmt.Printf("Starting server \"%s\" on \"%s\" (%s/%s)\n", server.config.Name, bind, runtime.GOOS, runtime.GOARCH)
+	psuccess := color.New(color.FgGreen)
+	pwarning := color.New(color.FgYellow)
+	perror := color.New(color.FgHiRed)
+
+	psuccess.Printf("\nserver \"%s\" on \"%s\"\n\n", server.config.Name, bind)
 
 	router := mux.NewRouter()
 
-	for _, page := range server.config.Pages.Entries {
+	firstFallbackIndex := -1
+
+	for index, page := range server.config.Pages.Entries {
 		if page.Path == "" {
 			page.Path = "/"
 		}
@@ -96,7 +102,11 @@ func (server *Server) Start() {
 
 		if len(page.Hosts) > 0 {
 			for _, host := range page.Hosts {
-				fmt.Printf(" > Exposing page \"%s\" matching host \"%s\" \n", page.Name, host)
+				if firstFallbackIndex >= 0 {
+					perror.Printf("✖ page \"%s\" will never be served\n", page.Name)
+				} else {
+					psuccess.Printf("✔ page \"%s\" responding on \"%s\" \n", page.Name, host)
+				}
 				router.
 					Host(host).
 					Subrouter().
@@ -104,10 +114,39 @@ func (server *Server) Start() {
 					Handler(NewServerHandler(server, page, source))
 			}
 		} else {
-			fmt.Printf(" > Exposing page \"%s\" matching any host\n", page.Name)
+			psuccess.Printf("✔ page \"%s\" responding as fallback\n", page.Name)
 			router.
 				PathPrefix(page.Path).
 				Handler(NewServerHandler(server, page, source))
+			if firstFallbackIndex < 0 {
+				firstFallbackIndex = index
+			}
+		}
+	}
+
+	if firstFallbackIndex >= 0 {
+
+		if firstFallbackIndex < len(server.config.Pages.Entries)-1 {
+			page := server.config.Pages.Entries[firstFallbackIndex]
+			err := fmt.Sprintf("\n"+
+				"-----------------------------------------------------------------\n"+
+				" WARNING\n"+
+				"-----------------------------------------------------------------\n"+
+				" Page \"%s\" is being used as a fallback page,\n"+
+				" but its not the last page in the serving chain.\n"+
+				" Since page blocks are always evaluated top down, the following\n"+
+				" pages will never be served:\n\n", page.Name)
+
+			for i := firstFallbackIndex + 1; i < len(server.config.Pages.Entries); i++ {
+				err += fmt.Sprintf("  - %s (%s)\n", server.config.Pages.Entries[i].Name, server.config.Pages.Entries[i].Hosts)
+			}
+
+			err = err + "\n" +
+				" If you want to temporarily disable a page, use\n" +
+				" `disable = true` inside that page block instead.\n" +
+				"-----------------------------------------------------------------\n"
+
+			pwarning.Print(err)
 		}
 	}
 
