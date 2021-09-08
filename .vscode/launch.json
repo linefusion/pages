@@ -13,6 +13,17 @@
         "--config",
         "./test/fixtures/Pagesfile"
       ]
+    },
+    {
+      "name": "Pages Debug",
+      "type": "go",
+      "request": "launch",
+      "mode": "auto",
+      "program": "${workspaceFolder}/cmd/pages/main.go",
+      "cwd": "${workspaceFolder}",
+      "args": [
+        "start"
+      ]
     }
   ]
 }

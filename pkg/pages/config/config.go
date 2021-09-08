@@ -3,7 +3,6 @@ package config
 import (
 	"errors"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/hashicorp/hcl/v2/hclparse"
 	"github.com/joho/godotenv"
 	"github.com/linefusion/pages/pkg/pages/config/funcs"
+	"github.com/valyala/fasthttp"
 	"github.com/zclconf/go-cty/cty"
 	"github.com/zclconf/go-cty/cty/function"
 )
@@ -122,34 +122,54 @@ func CreateDefaultContext() hcl.EvalContext {
 	return context
 }
 
-func CreateRequestContext(request *http.Request) hcl.EvalContext {
+func CreateRequestContext(request *fasthttp.Request, vars map[string]string) hcl.EvalContext {
 	context := CreateDefaultContext()
 
 	params := map[string]cty.Value{}
-	for paramKey, paramValues := range request.URL.Query() {
-		values := []cty.Value{}
-		for _, paramValue := range paramValues {
-			values = append(values, cty.StringVal(paramValue))
-		}
-		params[paramKey] = cty.ListVal(values)
-	}
+	request.URI().QueryArgs().VisitAll(func(key []byte, value []byte) {
+		/*
+		   values := []cty.Value{}
+		   for _, paramValue := range paramValues {
+		     values = append(values, cty.StringVal(paramValue))
+		   }
+		*/
+		params[string(key)] = cty.StringVal(string(value))
+	})
 
 	headers := map[string]cty.Value{}
-	for headerKey, headerValues := range request.Header {
-		values := []cty.Value{}
-		for _, headerValue := range headerValues {
-			values = append(values, cty.StringVal(headerValue))
-		}
-		headers[headerKey] = cty.ListVal(values)
+	request.Header.VisitAll(func(key []byte, value []byte) {
+		/*
+			values := []cty.Value{}
+			for _, headerValue := range headerValues {
+				values = append(values, cty.StringVal(headerValue))
+			}
+		*/
+		headers[string(key)] = cty.StringVal(string(value))
+	})
+
+	variables := map[string]cty.Value{}
+	for k, v := range vars {
+		variables[k] = cty.StringVal(v)
 	}
 
+	request.URI().QueryArgs().VisitAll(func(key []byte, value []byte) {
+		/*
+		   values := []cty.Value{}
+		   for _, paramValue := range paramValues {
+		     values = append(values, cty.StringVal(paramValue))
+		   }
+		*/
+		params[string(key)] = cty.StringVal(string(value))
+	})
+
 	context.Variables["request"] = cty.ObjectVal(map[string]cty.Value{
-		"method":  cty.StringVal(request.Method),
-		"scheme":  cty.StringVal(request.URL.Scheme),
-		"host":    cty.StringVal(request.Host),
-		"path":    cty.StringVal(request.URL.Path),
+		"method":  cty.StringVal(string(request.Header.Method())),
+		"scheme":  cty.StringVal(string(request.URI().Scheme())),
+		"host":    cty.StringVal(string(request.Host())),
+		"path":    cty.StringVal(string(request.URI().Path())),
 		"params":  cty.ObjectVal(params),
 		"headers": cty.ObjectVal(headers),
+		"vars":    cty.ObjectVal(variables),
 	})
 
 	return context
@@ -185,4 +205,20 @@ func LoadString(str string, variables map[string]cty.Value) (Config, error) {
 	parser := hclparse.NewParser()
 	file, diagnostics := parser.ParseHCL([]byte(str), "Pagesfile")
 	return load(parser, file, diagnostics)
+}
+
+func DefaultInt(value *int, def int) int {
+	if value == nil {
+		return def
+	} else {
+		return *value
+	}
+}
+
+func DefaultBool(value *bool, def bool) bool {
+	if value == nil {
+		return def
+	} else {
+		return *value
+	}
 }

@@ -10,7 +10,7 @@ import (
 	"github.com/linefusion/pages/pkg/common/app"
 	v "github.com/linefusion/pages/pkg/common/version"
 
-	_ "github.com/linefusion/pages/internal/pages/commands"
+	_ "github.com/linefusion/pages/cmd/pages/commands"
 )
 
 var (

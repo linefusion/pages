@@ -1,9 +1,9 @@
 package commands
 
 import (
-	"context"
 	"os"
 	"os/signal"
+	"sync"
 
 	"github.com/linefusion/pages/pkg/common/app"
 	"github.com/linefusion/pages/pkg/pages/config"
@@ -47,31 +47,38 @@ func init() {
 }
 
 func commandStart(c *cli.Context) error {
-	ctx, cancel := context.WithCancel(context.Background())
+	var wait sync.WaitGroup
+	wait.Add(1)
 
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
+	interrupt := make(chan os.Signal, 1)
+	signal.Notify(interrupt, os.Interrupt)
+
+	go func() {
+		<-interrupt
+		wait.Done()
+	}()
 
 	servers := []server.Server{}
 	for _, serverConfig := range cfg.Servers {
-		servers = append(servers, server.New(ctx, serverConfig))
+		srv := server.New(serverConfig)
+		servers = append(servers, srv)
+		srv.Start()
 	}
 
-	go func() {
-		<-ch
-		cancel()
-		for _, server := range servers {
-			server.Stop()
-		}
-	}()
+	// Wait for interruption/exit
+	wait.Wait()
+	close(interrupt)
 
-	for _, server := range servers {
-		server.Start()
+	// Close each server in parallel
+	wait.Add(len(servers))
+	for _, srv := range servers {
+		go func(srv server.Server) {
+			srv.Stop()
+			wait.Done()
+		}(srv)
 	}
 
-	for _, server := range servers {
-		server.Wait()
-	}
-
+	// Wait for all servers to shutdown
+	wait.Wait()
 	return nil
 }

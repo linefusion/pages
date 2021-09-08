@@ -4,22 +4,19 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"net/http"
 	"reflect"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/hashicorp/hcl/v2/gohcl"
-	"github.com/linefusion/pages/pkg/pages/cache"
 	"github.com/linefusion/pages/pkg/pages/config"
+	"github.com/valyala/fasthttp"
 )
 
 type Source interface {
 	Configure()
 
-	CreateKey(request *http.Request) string
-	CreateFs(context hcl.EvalContext, request *http.Request) (fs.FS, error)
-
-	CacheKeys() *cache.KeyBuilder
+	CreateKey(request *fasthttp.Request) string
+	CreateFs(request *fasthttp.Request, context hcl.EvalContext) (fs.FS, error)
 }
 
 var registeredSources map[string]reflect.Type = map[string]reflect.Type{}

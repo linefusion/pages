@@ -2,11 +2,10 @@ package cache
 
 import (
 	"hash/fnv"
-	"net/http"
-	"sort"
 	"strconv"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/valyala/fasthttp"
 )
 
 const (
@@ -125,61 +124,67 @@ func (key *KeyBuilder) UseAll() *KeyBuilder {
 	return key.UseScheme().UseHost().UsePath().UseParams().UseHeaders()
 }
 
-func (key *KeyBuilder) Get(request *http.Request) uint64 {
+func (key *KeyBuilder) Get(request *fasthttp.Request) uint64 {
 	hash := fnv.New64a()
 	if request == nil {
 		return 0
 	}
 
 	if key.flags&MethodFlag == MethodFlag {
-		hash.Write([]byte(request.Method))
+		hash.Write(request.Header.Method())
 		hash.Write([]byte("\n"))
 	}
 
 	if key.flags&SchemeFlag == SchemeFlag {
-		hash.Write([]byte(request.URL.Scheme))
+		hash.Write(request.URI().Scheme())
 		hash.Write([]byte("\n"))
 	}
 
 	if key.flags&HostFlag == HostFlag {
-		hash.Write([]byte(request.URL.Host))
+		hash.Write(request.Host())
 		hash.Write([]byte("\n"))
 	}
 
 	if key.flags&PathFlag == PathFlag {
-		hash.Write([]byte(request.URL.Path))
+		hash.Write(request.URI().Path())
 		hash.Write([]byte("\n"))
 	}
 
 	if key.flags&ParamsFlag == ParamsFlag {
-		params := request.URL.Query()
-		for _, param := range params {
-			sort.Slice(param, func(i, j int) bool {
-				return param[i] < param[j]
-			})
-		}
-		hash.Write([]byte(params.Encode()))
+		/*
+			params.VisitAll()
+			for _, param := range params {
+				sort.Slice(param, func(i, j int) bool {
+					return param[i] < param[j]
+				})
+			}
+		*/
+		hash.Write(request.URI().QueryString())
 	}
 
 	if key.flags&HeadersFlag == HeadersFlag {
-		keys := make([]string, 0, len(request.Header))
-		for k := range request.Header {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
-			hash.Write([]byte(k))
-			hash.Write([]byte("\n"))
-			for _, v := range request.Header[k] {
-				hash.Write([]byte(v))
-				hash.Write([]byte("\n"))
+		hash.Write(request.Header.RawHeaders())
+		hash.Write([]byte("\n"))
+		/*
+			keys := make([]string, 0, len(request.Header))
+			for k := range request.Header {
+				keys = append(keys, k)
 			}
-		}
+			sort.Strings(keys)
+			for _, k := range keys {
+				hash.Write([]byte(k))
+				hash.Write([]byte("\n"))
+				for _, v := range request.Header[k] {
+					hash.Write([]byte(v))
+					hash.Write([]byte("\n"))
+				}
+			}
+		*/
 	}
 
 	return hash.Sum64()
 }
 
-func (key *KeyBuilder) GetString(request *http.Request) string {
+func (key *KeyBuilder) GetString(request *fasthttp.Request) string {
 	return strconv.FormatUint(key.Get(request), 36)
 }

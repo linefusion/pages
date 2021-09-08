@@ -2,15 +2,14 @@ package sources
 
 import (
 	"io/fs"
-	"net/http"
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/s3"
-	"github.com/jszwec/s3fs"
-	"github.com/linefusion/pages/pkg/fsh"
+	awss3 "github.com/aws/aws-sdk-go/service/s3"
+	"github.com/linefusion/pages/pkg/iofs/s3"
+	"github.com/valyala/fasthttp"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/zclconf/go-cty/cty"
@@ -26,7 +25,7 @@ type S3Source struct {
 	Region          string         `hcl:"region,optional"`
 }
 
-func (source *S3Source) CreateFs(context hcl.EvalContext, request *http.Request) (fs.FS, error) {
+func (source *S3Source) CreateFs(request *fasthttp.Request, context hcl.EvalContext) (fs.FS, error) {
 	rootDir, err := os.Getwd()
 	if err != nil {
 		rootDir = "/"
@@ -48,11 +47,7 @@ func (source *S3Source) CreateFs(context hcl.EvalContext, request *http.Request)
 		S3ForcePathStyle: aws.Bool(true),
 	})
 
-	return fsh.Normalize(s3fs.New(s3.New(session), source.Bucket), fsh.NormalizeOptions{
-		TrimLeadingSlash: true,
-		Separator:        fsh.ForwardSeparator,
-		Prefix:           rootDir,
-	}), nil
+	return s3.New(awss3.New(session), source.Bucket, rootDir), nil
 }
 
 func (source *S3Source) Configure() {

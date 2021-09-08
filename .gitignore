@@ -4,3 +4,5 @@
 __*_bin
 /dist
 /node_modules
+/Pagesfile
+/pushtest

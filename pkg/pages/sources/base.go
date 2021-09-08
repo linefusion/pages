@@ -2,10 +2,10 @@ package sources
 
 import (
 	"errors"
-	"net/http"
 
 	"github.com/hashicorp/hcl/v2"
 	"github.com/linefusion/pages/pkg/pages/cache"
+	"github.com/valyala/fasthttp"
 	"github.com/zclconf/go-cty/cty"
 )
 
@@ -20,7 +20,7 @@ func (source *BaseSource) CacheKeys() *cache.KeyBuilder {
 	return source.cacheKeys
 }
 
-func (source *BaseSource) CreateKey(request *http.Request) string {
+func (source *BaseSource) CreateKey(request *fasthttp.Request) string {
 	return source.CacheKeys().GetString(request)
 }
 

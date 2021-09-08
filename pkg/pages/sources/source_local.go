@@ -3,10 +3,10 @@ package sources
 import (
 	"errors"
 	"io/fs"
-	"net/http"
 	"os"
 
 	"github.com/hashicorp/hcl/v2"
+	"github.com/valyala/fasthttp"
 )
 
 type LocalSource struct {
@@ -14,7 +14,7 @@ type LocalSource struct {
 	Root hcl.Expression `hcl:"root,optional"`
 }
 
-func (source *LocalSource) CreateFs(context hcl.EvalContext, request *http.Request) (fs.FS, error) {
+func (source *LocalSource) CreateFs(request *fasthttp.Request, context hcl.EvalContext) (fs.FS, error) {
 	rootDir, err := os.Getwd()
 	if err != nil {
 		rootDir = "./"
